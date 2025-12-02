@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -17,8 +17,8 @@
         }
         .center-pattern {
             width: 100%; height: 100%; border-radius: 50%;
-            /* 【关键修改1】改为相对路径：从index.html出发，找 image/IMG_4397.png */
-            background: url('image/IMG_4397.png') center/cover no-repeat;
+            /* 【修改点1】改为：添加 ./ */
+            background: url('./image/IMG_4397.png') center/cover no-repeat;
             cursor: pointer; position: relative; z-index: 10; transition: opacity 0.3s;
         }
         .arrow {
@@ -64,32 +64,41 @@
             const frameTimingConfig = { 19: 200, 37: 1000 };
             const scaleRatio = animationConfig.animationSize / animationConfig.originalSize;
             const baseFrameInterval = 1000 / animationConfig.fps;
+            
             function preloadAnimationFrames() {
                 const frames = [], promises = [];
                 console.log('开始预加载动画帧...');
+                
                 for (let i = 1; i <= 19; i++) {
                     const frameNum = i.toString().padStart(4, '0');
                     const img = new Image();
-                    // 【关键修改2】第一组动画改为相对路径
-                    img.src = `image/mimo${frameNum}.png`;
-                    frames.push(img); console.log(`加载: ${img.src}`);
+                    // 【修改点2】改为：添加 ./ 
+                    img.src = `./image/mimo${frameNum}.png`;
+                    frames.push(img); 
+                    console.log(`加载: ${img.src}`);
                     promises.push(new Promise((resolve, reject) => {
-                        img.onload = resolve; img.onerror = () => reject(`无法加载: ${img.src}`);
+                        img.onload = resolve; 
+                        img.onerror = () => reject(`无法加载: ${img.src}`);
                     }));
                 }
+                
                 for (let i = 3; i <= 20; i++) {
                     const frameNum = i.toString().padStart(2, '0');
                     const img = new Image();
-                    // 【关键修改3】第二组动画改为相对路径
-                    img.src = `image/IMG_44${frameNum}.png`;
-                    frames.push(img); console.log(`加载: ${img.src}`);
+                    // 【修改点3】改为：添加 ./
+                    img.src = `./image/IMG_44${frameNum}.png`;
+                    frames.push(img); 
+                    console.log(`加载: ${img.src}`);
                     promises.push(new Promise((resolve, reject) => {
-                        img.onload = resolve; img.onerror = () => reject(`无法加载: ${img.src}`);
+                        img.onload = resolve; 
+                        img.onerror = () => reject(`无法加载: ${img.src}`);
                     }));
                 }
+                
                 return { frames, promises };
             }
-            // ... (createArrows, playAnimationSequence 等函数保持不变，确保它们使用的是预加载的frames，其src已改为相对路径) ...
+            
+            // ... 其他函数保持不变 ...
             function createArrows() {
                 const containerRect = container.getBoundingClientRect();
                 const arrowCount = 12;
@@ -97,34 +106,49 @@
                 const centerY = containerRect.top + containerRect.height / 2;
                 const patternRadius = containerRect.width / 2;
                 document.querySelectorAll('.arrow').forEach(arrow => arrow.remove());
+                
                 for (let i = 0; i < arrowCount; i++) {
                     const angle = (i / arrowCount) * Math.PI * 2;
-                    const dx = Math.cos(angle); const dy = Math.sin(angle);
+                    const dx = Math.cos(angle); 
+                    const dy = Math.sin(angle);
                     const distanceFromCenter = patternRadius * 0.95;
                     const x = centerX + distanceFromCenter * dx;
                     const y = centerY + distanceFromCenter * dy;
+                    
                     const arrow = document.createElement('div');
                     arrow.className = 'arrow';
                     arrow.style.position = 'fixed';
-                    arrow.style.left = `${x}px`; arrow.style.top = `${y}px`;
+                    arrow.style.left = `${x}px`; 
+                    arrow.style.top = `${y}px`;
+                    
                     const rotation = Math.atan2(centerY - y, centerX - x) * (180 / Math.PI);
                     arrow.style.setProperty('--rotation', `${rotation}deg`);
-                    arrow.style.setProperty('--dx', dx); arrow.style.setProperty('--dy', dy);
+                    arrow.style.setProperty('--dx', dx); 
+                    arrow.style.setProperty('--dy', dy);
                     arrow.style.animationDelay = '0s';
+                    
                     arrow.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12H19M19 12L12 5M19 12L12 19" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
                     document.body.appendChild(arrow);
                 }
             }
+            
             function playAnimationSequence(frames) {
                 console.log('开始播放动画序列...');
                 const containerRect = container.getBoundingClientRect();
                 centerPattern.style.opacity = '0';
                 centerPattern.style.pointerEvents = 'none';
                 animationContainer.style.display = 'flex';
-                let currentFrame = 0; const totalFrames = frames.length;
+                
+                let currentFrame = 0; 
+                const totalFrames = frames.length;
+                
                 function showFrame() {
                     animationContainer.innerHTML = '';
-                    if (currentFrame >= totalFrames) { console.log('动画播放完毕'); return; }
+                    if (currentFrame >= totalFrames) { 
+                        console.log('动画播放完毕'); 
+                        return; 
+                    }
+                    
                     const frameElement = document.createElement('div');
                     frameElement.className = 'animation-frame';
                     frameElement.style.width = `${containerRect.width}px`;
@@ -133,50 +157,66 @@
                     frameElement.style.transform = `scale(${scaleRatio})`;
                     frameElement.style.opacity = '1';
                     animationContainer.appendChild(frameElement);
+                    
                     let frameInterval = baseFrameInterval;
                     if (frameTimingConfig[currentFrame] !== undefined) {
                         frameInterval = frameTimingConfig[currentFrame];
                         console.log(`第${currentFrame + 1}帧使用自定义时间: ${frameInterval}ms`);
                     }
-                    currentFrame++; setTimeout(showFrame, frameInterval);
+                    
+                    currentFrame++; 
+                    setTimeout(showFrame, frameInterval);
                 }
                 showFrame();
             }
+            
             const { frames, promises } = preloadAnimationFrames();
             let allFramesLoaded = false;
+            
             Promise.all(promises).then(() => {
-                allFramesLoaded = true; console.log('✓ 所有动画帧加载完成');
+                allFramesLoaded = true; 
+                console.log('✓ 所有动画帧加载完成');
             }).catch((error) => {
                 console.error('✗ 图片加载失败:', error);
                 alert(`图片加载失败: ${error}\n请检查 image 文件夹内图片是否存在`);
             });
+            
             createArrows();
             let isClicked = false;
+            
             centerPattern.addEventListener('click', function() {
                 if (!isClicked) {
                     console.log('点击触发动画播放');
                     const arrows = document.querySelectorAll('.arrow');
                     arrows.forEach(arrow => {
                         arrow.style.transition = 'opacity 0.3s, transform 0.3s';
-                        arrow.style.opacity = '0'; arrow.style.transform = 'scale(0.5)';
+                        arrow.style.opacity = '0'; 
+                        arrow.style.transform = 'scale(0.5)';
                         setTimeout(() => { arrow.style.display = 'none'; }, 300);
                     });
+                    
                     if (allFramesLoaded) {
                         playAnimationSequence(frames);
                     } else {
                         console.log('动画帧还未加载完成，等待中...');
                         const loadingMsg = document.createElement('div');
                         loadingMsg.textContent = '加载动画中...';
-                        loadingMsg.style.color = 'white'; loadingMsg.style.position = 'fixed';
-                        loadingMsg.style.top = '50%'; loadingMsg.style.left = '50%';
+                        loadingMsg.style.color = 'white'; 
+                        loadingMsg.style.position = 'fixed';
+                        loadingMsg.style.top = '50%'; 
+                        loadingMsg.style.left = '50%';
                         loadingMsg.style.transform = 'translate(-50%, -50%)';
-                        loadingMsg.style.zIndex = '30'; loadingMsg.style.fontSize = '20px';
+                        loadingMsg.style.zIndex = '30'; 
+                        loadingMsg.style.fontSize = '20px';
                         loadingMsg.style.background = 'rgba(0,0,0,0.8)';
-                        loadingMsg.style.padding = '20px'; loadingMsg.style.borderRadius = '10px';
+                        loadingMsg.style.padding = '20px'; 
+                        loadingMsg.style.borderRadius = '10px';
                         document.body.appendChild(loadingMsg);
+                        
                         const checkInterval = setInterval(() => {
                             if (allFramesLoaded) {
-                                clearInterval(checkInterval); loadingMsg.remove();
+                                clearInterval(checkInterval); 
+                                loadingMsg.remove();
                                 playAnimationSequence(frames);
                             }
                         }, 100);
@@ -184,6 +224,7 @@
                     isClicked = true;
                 }
             });
+            
             window.addEventListener('resize', createArrows);
         });
     </script>
