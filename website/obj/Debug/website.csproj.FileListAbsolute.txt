@@ -1,2 +1,0 @@
-D:\web！！！！！！\website\website\obj\Debug\website.csproj.AssemblyReference.cache
-D:\web！！！！！！\website\website\obj\Debug\website.csproj.CoreCompileInputs.cache
