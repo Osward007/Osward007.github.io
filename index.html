@@ -17,8 +17,8 @@
         }
         .center-pattern {
             width: 100%; height: 100%; border-radius: 50%;
-            /* 【修改1】中心图片在同层目录 */
-            background: url('./IMG_4397.png') center/cover no-repeat;
+            /* 【修改1】中心图片改为 1.png */
+            background: url('./1.png') center/cover no-repeat;
             cursor: pointer; position: relative; z-index: 10; transition: opacity 0.3s;
         }
         .arrow {
@@ -67,61 +67,63 @@
             
             function preloadAnimationFrames() {
                 const frames = [], promises = [];
-                console.log('🚀 开始预加载动画帧（新目录结构）...');
+                console.log('🚀 开始预加载动画帧（新文件名）...');
                 
-                // ========== 【修改2】中心图片（与html同层） ==========
+                // ========== 【修改2】中心图片改为 1.png ==========
                 const centerImg = new Image();
                 centerImg.crossOrigin = 'anonymous';
-                centerImg.src = './IMG_4397.png';  // 直接在同层目录
+                centerImg.src = './1.png';  // 原IMG_4397.png
                 frames.push(centerImg);
                 promises.push(new Promise((resolve) => {
                     centerImg.onload = () => {
-                        console.log('✅ 中心图片加载成功');
+                        console.log('✅ 中心图片 1.png 加载成功');
                         resolve();
                     };
                     centerImg.onerror = () => {
-                        console.warn('⚠️ 中心图片加载失败');
+                        console.warn('⚠️ 中心图片 1.png 加载失败');
                         resolve();
                     };
                 }));
                 
-                // ========== 【修改3】第一组动画（mimo文件夹） ==========
-                console.log('📁 加载第一组（mimo文件夹）...');
+                // ========== 【修改3】第一组动画不变 ==========
+                console.log('📁 加载第一组（mimo0001-mimo0019）...');
                 for (let i = 1; i <= 19; i++) {
                     const frameNum = i.toString().padStart(4, '0');
                     const img = new Image();
                     img.crossOrigin = 'anonymous';
-                    img.src = `./mimo/mimo${frameNum}.png`;  // 在mimo文件夹
+                    img.src = `./image/mimo${frameNum}.png`;
                     frames.push(img);
                     
                     promises.push(new Promise((resolve) => {
                         img.onload = () => {
-                            console.log(`✅ mimo/mimo${frameNum}.png 加载成功`);
+                            console.log(`✅ mimo${frameNum}.png 加载成功`);
                             resolve();
                         };
                         img.onerror = () => {
-                            console.warn(`⚠️ mimo/mimo${frameNum}.png 加载失败`);
+                            console.warn(`⚠️ mimo${frameNum}.png 加载失败`);
                             resolve();
                         };
                     }));
                 }
                 
-                // ========== 【修改4】第二组动画（2文件夹） ==========
-                console.log('📁 加载第二组（2文件夹）...');
-                for (let i = 3; i <= 20; i++) {
-                    const frameNum = i.toString().padStart(2, '0');
+                // ========== 【修改4】第二组动画改为 2 (1).png 到 2 (18).png ==========
+                console.log('📁 加载第二组（2 (1) 到 2 (18)）...');
+                // 注意：2 (1).png 对应原来的 IMG_4403.png
+                // 2 (18).png 对应原来的 IMG_4420.png
+                for (let i = 1; i <= 18; i++) {
                     const img = new Image();
                     img.crossOrigin = 'anonymous';
-                    img.src = `./2/IMG_44${frameNum}.png`;  // 在2文件夹
+                    // 文件名格式：2 (1).png, 2 (2).png, ..., 2 (18).png
+                    img.src = `./image/2 (${i}).png`;
                     frames.push(img);
                     
                     promises.push(new Promise((resolve) => {
                         img.onload = () => {
-                            console.log(`✅ 2/IMG_44${frameNum}.png 加载成功`);
+                            console.log(`✅ 2 (${i}).png 加载成功`);
                             resolve();
                         };
                         img.onerror = () => {
-                            console.warn(`⚠️ 2/IMG_44${frameNum}.png 加载失败`);
+                            console.warn(`⚠️ 2 (${i}).png 加载失败`);
                             resolve();
                         };
                     }));
@@ -211,6 +213,17 @@
                     img.complete && img.naturalHeight !== 0
                 ).length;
                 console.log(`🎉 加载完成！成功: ${loadedCount}/${frames.length} 张图片`);
+                
+                // 显示加载详情
+                console.log('\n=== 加载详情 ===');
+                frames.forEach((img, index) => {
+                    const filename = img.src.split('/').pop();
+                    if (img.complete && img.naturalHeight !== 0) {
+                        console.log(`✅ ${index+1}. ${filename}`);
+                    } else {
+                        console.log(`❌ ${index+1}. ${filename} (失败)`);
+                    }
+                });
             }).catch((error) => {
                 console.warn('⚠️ 加载过程中出现错误:', error);
                 allFramesLoaded = true;
