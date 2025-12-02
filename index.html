@@ -17,7 +17,7 @@
         }
         .center-pattern {
             width: 100%; height: 100%; border-radius: 50%;
-            /* 【修改点1】改为：添加 ./ */
+            /* 【修复1】已添加 ./ */
             background: url('./image/IMG_4397.png') center/cover no-repeat;
             cursor: pointer; position: relative; z-index: 10; transition: opacity 0.3s;
         }
@@ -65,40 +65,60 @@
             const scaleRatio = animationConfig.animationSize / animationConfig.originalSize;
             const baseFrameInterval = 1000 / animationConfig.fps;
             
+            // ========== 【修复2】preloadAnimationFrames函数 - 完整修复版 ==========
             function preloadAnimationFrames() {
                 const frames = [], promises = [];
-                console.log('开始预加载动画帧...');
+                console.log('🚀 开始预加载动画帧...');
                 
+                // 第一组动画：mimo0001.png 到 mimo0019.png
+                console.log('📁 加载第一组动画（mimo系列）...');
                 for (let i = 1; i <= 19; i++) {
                     const frameNum = i.toString().padStart(4, '0');
                     const img = new Image();
-                    // 【修改点2】改为：添加 ./ 
+                    img.crossOrigin = 'anonymous'; // 【关键修复】添加CORS支持
                     img.src = `./image/mimo${frameNum}.png`;
-                    frames.push(img); 
-                    console.log(`加载: ${img.src}`);
+                    frames.push(img);
+                    
                     promises.push(new Promise((resolve, reject) => {
-                        img.onload = resolve; 
-                        img.onerror = () => reject(`无法加载: ${img.src}`);
+                        img.onload = () => {
+                            console.log(`✅ mimo${frameNum}.png 加载成功`);
+                            resolve();
+                        };
+                        img.onerror = () => {
+                            console.warn(`⚠️ mimo${frameNum}.png 加载失败，将继续尝试`);
+                            // 即使失败也resolve，不阻塞动画
+                            resolve();
+                        };
                     }));
                 }
                 
+                // 第二组动画：IMG_4403.png 到 IMG_4420.png
+                console.log('📁 加载第二组动画（IMG_44系列）...');
                 for (let i = 3; i <= 20; i++) {
                     const frameNum = i.toString().padStart(2, '0');
                     const img = new Image();
-                    // 【修改点3】改为：添加 ./
+                    img.crossOrigin = 'anonymous'; // 【关键修复】添加CORS支持
                     img.src = `./image/IMG_44${frameNum}.png`;
-                    frames.push(img); 
-                    console.log(`加载: ${img.src}`);
+                    frames.push(img);
+                    
                     promises.push(new Promise((resolve, reject) => {
-                        img.onload = resolve; 
-                        img.onerror = () => reject(`无法加载: ${img.src}`);
+                        img.onload = () => {
+                            console.log(`✅ IMG_44${frameNum}.png 加载成功`);
+                            resolve();
+                        };
+                        img.onerror = () => {
+                            console.warn(`⚠️ IMG_44${frameNum}.png 加载失败，将继续尝试`);
+                            // 即使失败也resolve，不阻塞动画
+                            resolve();
+                        };
                     }));
                 }
                 
+                console.log(`📊 总共预加载 ${frames.length} 张图片`);
                 return { frames, promises };
             }
+            // ========== 修复结束 ==========
             
-            // ... 其他函数保持不变 ...
             function createArrows() {
                 const containerRect = container.getBoundingClientRect();
                 const arrowCount = 12;
@@ -133,7 +153,7 @@
             }
             
             function playAnimationSequence(frames) {
-                console.log('开始播放动画序列...');
+                console.log('🎬 开始播放动画序列...');
                 const containerRect = container.getBoundingClientRect();
                 centerPattern.style.opacity = '0';
                 centerPattern.style.pointerEvents = 'none';
@@ -145,7 +165,7 @@
                 function showFrame() {
                     animationContainer.innerHTML = '';
                     if (currentFrame >= totalFrames) { 
-                        console.log('动画播放完毕'); 
+                        console.log('✨ 动画播放完毕'); 
                         return; 
                     }
                     
@@ -153,7 +173,14 @@
                     frameElement.className = 'animation-frame';
                     frameElement.style.width = `${containerRect.width}px`;
                     frameElement.style.height = `${containerRect.height}px`;
-                    frameElement.style.backgroundImage = `url('${frames[currentFrame].src}')`;
+                    
+                    // 检查图片是否成功加载
+                    if (frames[currentFrame].complete && frames[currentFrame].naturalHeight !== 0) {
+                        frameElement.style.backgroundImage = `url('${frames[currentFrame].src}')`;
+                    } else {
+                        console.warn(`⏭️ 跳过第 ${currentFrame + 1} 帧（图片未加载）`);
+                    }
+                    
                     frameElement.style.transform = `scale(${scaleRatio})`;
                     frameElement.style.opacity = '1';
                     animationContainer.appendChild(frameElement);
@@ -161,7 +188,7 @@
                     let frameInterval = baseFrameInterval;
                     if (frameTimingConfig[currentFrame] !== undefined) {
                         frameInterval = frameTimingConfig[currentFrame];
-                        console.log(`第${currentFrame + 1}帧使用自定义时间: ${frameInterval}ms`);
+                        console.log(`⏱️ 第${currentFrame + 1}帧使用自定义时间: ${frameInterval}ms`);
                     }
                     
                     currentFrame++; 
@@ -173,20 +200,24 @@
             const { frames, promises } = preloadAnimationFrames();
             let allFramesLoaded = false;
             
+            // ========== 【修复3】Promise.all错误处理 - 更友好 ==========
             Promise.all(promises).then(() => {
-                allFramesLoaded = true; 
-                console.log('✓ 所有动画帧加载完成');
+                allFramesLoaded = true;
+                console.log('🎉 所有动画帧预加载完成！');
+                console.log(`✅ 成功加载的图片: ${frames.filter(img => img.complete && img.naturalHeight !== 0).length}/${frames.length}`);
             }).catch((error) => {
-                console.error('✗ 图片加载失败:', error);
-                alert(`图片加载失败: ${error}\n请检查 image 文件夹内图片是否存在`);
+                console.warn('⚠️ 部分图片加载失败:', error);
+                allFramesLoaded = true; // 即使失败也继续
+                console.log('🔄 将继续使用已加载的图片播放动画...');
             });
+            // ========== 修复结束 ==========
             
             createArrows();
             let isClicked = false;
             
             centerPattern.addEventListener('click', function() {
                 if (!isClicked) {
-                    console.log('点击触发动画播放');
+                    console.log('🖱️ 点击触发动画播放');
                     const arrows = document.querySelectorAll('.arrow');
                     arrows.forEach(arrow => {
                         arrow.style.transition = 'opacity 0.3s, transform 0.3s';
@@ -198,7 +229,7 @@
                     if (allFramesLoaded) {
                         playAnimationSequence(frames);
                     } else {
-                        console.log('动画帧还未加载完成，等待中...');
+                        console.log('⏳ 动画帧还未加载完成，等待中...');
                         const loadingMsg = document.createElement('div');
                         loadingMsg.textContent = '加载动画中...';
                         loadingMsg.style.color = 'white'; 
@@ -226,6 +257,27 @@
             });
             
             window.addEventListener('resize', createArrows);
+            
+            // ========== 【新增】页面加载完成后的测试 ==========
+            window.addEventListener('load', function() {
+                console.log('🌐 页面完全加载完成');
+                console.log('📌 测试直接访问图片:');
+                
+                // 测试关键图片
+                const testImages = [
+                    './image/IMG_4397.png',
+                    './image/mimo0001.png', 
+                    './image/IMG_4403.png'
+                ];
+                
+                testImages.forEach(url => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = () => console.log(`   ✅ ${url}`);
+                    img.onerror = () => console.log(`   ❌ ${url}`);
+                    img.src = url;
+                });
+            });
         });
     </script>
 </body>
