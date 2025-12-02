@@ -17,7 +17,6 @@
         }
         .center-pattern {
             width: 100%; height: 100%; border-radius: 50%;
-            /* 【修复1】已添加 ./ */
             background: url('./image/IMG_4397.png') center/cover no-repeat;
             cursor: pointer; position: relative; z-index: 10; transition: opacity 0.3s;
         }
@@ -65,59 +64,106 @@
             const scaleRatio = animationConfig.animationSize / animationConfig.originalSize;
             const baseFrameInterval = 1000 / animationConfig.fps;
             
-            // ========== 【修复2】preloadAnimationFrames函数 - 完整修复版 ==========
-            function preloadAnimationFrames() {
-                const frames = [], promises = [];
-                console.log('🚀 开始预加载动画帧...');
+            // ==================== 【核心修复】智能加载器 ====================
+            function createSmartImageLoader() {
+                let queue = [];
+                let isProcessing = false;
+                const loadedImages = [];
                 
-                // 第一组动画：mimo0001.png 到 mimo0019.png
-                console.log('📁 加载第一组动画（mimo系列）...');
+                function processQueue() {
+                    if (isProcessing || queue.length === 0) return;
+                    
+                    isProcessing = true;
+                    const { src, resolve, retryCount = 0 } = queue.shift();
+                    const filename = src.split('/').pop();
+                    
+                    console.log(`📥 加载: ${filename} (还有 ${queue.length} 个等待)`);
+                    
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    
+                    // 避免GitHub缓存：每次请求不同URL
+                    const uniqueSrc = src + (src.includes('?') ? '&' : '?') + 
+                        `_t=${Date.now()}_${retryCount}`;
+                    
+                    img.onload = () => {
+                        console.log(`✅ ${filename} 成功 (第${retryCount + 1}次尝试)`);
+                        loadedImages.push(img);
+                        resolve(img);
+                        isProcessing = false;
+                        
+                        // GitHub限制：成功加载后等待800ms再加载下一张
+                        setTimeout(processQueue, 800);
+                    };
+                    
+                    img.onerror = () => {
+                        if (retryCount < 2) { // 最多重试2次
+                            console.log(`🔄 ${filename} 重试中... (${retryCount + 1}/2)`);
+                            
+                            // 指数退避：1秒、2秒
+                            const delay = 1000 * (retryCount + 1);
+                            setTimeout(() => {
+                                queue.unshift({ 
+                                    src, 
+                                    resolve, 
+                                    retryCount: retryCount + 1 
+                                });
+                                isProcessing = false;
+                                processQueue();
+                            }, delay);
+                        } else {
+                            console.warn(`⚠️ ${filename} 最终失败，跳过`);
+                            // 创建空图片占位，不阻塞流程
+                            const emptyImg = new Image();
+                            loadedImages.push(emptyImg);
+                            resolve(emptyImg);
+                            isProcessing = false;
+                            setTimeout(processQueue, 300);
+                        }
+                    };
+                    
+                    img.src = uniqueSrc;
+                }
+                
+                return {
+                    add: (src) => {
+                        return new Promise((resolve) => {
+                            queue.push({ src, resolve });
+                            processQueue();
+                        });
+                    },
+                    getLoadedImages: () => loadedImages
+                };
+            }
+            
+            function preloadAnimationFrames() {
+                console.log('🚀 开始智能加载38张动画帧...');
+                const loader = createSmartImageLoader();
+                const promises = [];
+                
+                // 中心图片
+                promises.push(loader.add('./image/IMG_4397.png'));
+                
+                // 第一组：mimo0001.png 到 mimo0019.png
+                console.log('📦 加载第一组（mimo0001-mimo0019）');
                 for (let i = 1; i <= 19; i++) {
                     const frameNum = i.toString().padStart(4, '0');
-                    const img = new Image();
-                    img.crossOrigin = 'anonymous'; // 【关键修复】添加CORS支持
-                    img.src = `./image/mimo${frameNum}.png`;
-                    frames.push(img);
-                    
-                    promises.push(new Promise((resolve, reject) => {
-                        img.onload = () => {
-                            console.log(`✅ mimo${frameNum}.png 加载成功`);
-                            resolve();
-                        };
-                        img.onerror = () => {
-                            console.warn(`⚠️ mimo${frameNum}.png 加载失败，将继续尝试`);
-                            // 即使失败也resolve，不阻塞动画
-                            resolve();
-                        };
-                    }));
+                    promises.push(loader.add(`./image/mimo${frameNum}.png`));
                 }
                 
-                // 第二组动画：IMG_4403.png 到 IMG_4420.png
-                console.log('📁 加载第二组动画（IMG_44系列）...');
+                // 第二组：IMG_4403.png 到 IMG_4420.png
+                console.log('📦 加载第二组（IMG_4403-IMG_4420）');
                 for (let i = 3; i <= 20; i++) {
                     const frameNum = i.toString().padStart(2, '0');
-                    const img = new Image();
-                    img.crossOrigin = 'anonymous'; // 【关键修复】添加CORS支持
-                    img.src = `./image/IMG_44${frameNum}.png`;
-                    frames.push(img);
-                    
-                    promises.push(new Promise((resolve, reject) => {
-                        img.onload = () => {
-                            console.log(`✅ IMG_44${frameNum}.png 加载成功`);
-                            resolve();
-                        };
-                        img.onerror = () => {
-                            console.warn(`⚠️ IMG_44${frameNum}.png 加载失败，将继续尝试`);
-                            // 即使失败也resolve，不阻塞动画
-                            resolve();
-                        };
-                    }));
+                    promises.push(loader.add(`./image/IMG_44${frameNum}.png`));
                 }
                 
-                console.log(`📊 总共预加载 ${frames.length} 张图片`);
-                return { frames, promises };
+                return { 
+                    frames: loader.getLoadedImages(), 
+                    promises: Promise.all(promises) 
+                };
             }
-            // ========== 修复结束 ==========
+            // ==================== 修复结束 ====================
             
             function createArrows() {
                 const containerRect = container.getBoundingClientRect();
@@ -154,18 +200,42 @@
             
             function playAnimationSequence(frames) {
                 console.log('🎬 开始播放动画序列...');
+                
+                // 过滤掉加载失败的图片
+                const validFrames = frames.filter(img => 
+                    img.src && img.complete && img.naturalHeight > 0
+                );
+                
+                console.log(`📊 可用图片帧: ${validFrames.length}/38`);
+                
+                if (validFrames.length < 20) {
+                    const warning = document.createElement('div');
+                    warning.innerHTML = `
+                        <div style="
+                            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+                            background: rgba(255,100,100,0.9); color: white; padding: 15px;
+                            border-radius: 10px; z-index: 100; text-align: center;
+                            max-width: 80%; font-size: 14px; backdrop-filter: blur(5px);
+                        ">
+                            ⚠️ 动画不完整：只加载了 ${validFrames.length}/38 张图片<br>
+                            GitHub限制导致部分图片加载失败
+                        </div>
+                    `;
+                    document.body.appendChild(warning);
+                    setTimeout(() => warning.remove(), 5000);
+                }
+                
                 const containerRect = container.getBoundingClientRect();
                 centerPattern.style.opacity = '0';
                 centerPattern.style.pointerEvents = 'none';
                 animationContainer.style.display = 'flex';
                 
-                let currentFrame = 0; 
-                const totalFrames = frames.length;
+                let currentFrame = 0;
                 
                 function showFrame() {
                     animationContainer.innerHTML = '';
-                    if (currentFrame >= totalFrames) { 
-                        console.log('✨ 动画播放完毕'); 
+                    if (currentFrame >= validFrames.length) { 
+                        console.log(`✨ 动画播放完毕 (使用了 ${validFrames.length} 张图片)`); 
                         return; 
                     }
                     
@@ -173,22 +243,15 @@
                     frameElement.className = 'animation-frame';
                     frameElement.style.width = `${containerRect.width}px`;
                     frameElement.style.height = `${containerRect.height}px`;
-                    
-                    // 检查图片是否成功加载
-                    if (frames[currentFrame].complete && frames[currentFrame].naturalHeight !== 0) {
-                        frameElement.style.backgroundImage = `url('${frames[currentFrame].src}')`;
-                    } else {
-                        console.warn(`⏭️ 跳过第 ${currentFrame + 1} 帧（图片未加载）`);
-                    }
-                    
+                    frameElement.style.backgroundImage = `url('${validFrames[currentFrame].src}')`;
                     frameElement.style.transform = `scale(${scaleRatio})`;
                     frameElement.style.opacity = '1';
                     animationContainer.appendChild(frameElement);
                     
                     let frameInterval = baseFrameInterval;
-                    if (frameTimingConfig[currentFrame] !== undefined) {
-                        frameInterval = frameTimingConfig[currentFrame];
-                        console.log(`⏱️ 第${currentFrame + 1}帧使用自定义时间: ${frameInterval}ms`);
+                    const originalIndex = frames.indexOf(validFrames[currentFrame]);
+                    if (frameTimingConfig[originalIndex] !== undefined) {
+                        frameInterval = frameTimingConfig[originalIndex];
                     }
                     
                     currentFrame++; 
@@ -200,17 +263,16 @@
             const { frames, promises } = preloadAnimationFrames();
             let allFramesLoaded = false;
             
-            // ========== 【修复3】Promise.all错误处理 - 更友好 ==========
-            Promise.all(promises).then(() => {
+            promises.then(() => {
                 allFramesLoaded = true;
-                console.log('🎉 所有动画帧预加载完成！');
-                console.log(`✅ 成功加载的图片: ${frames.filter(img => img.complete && img.naturalHeight !== 0).length}/${frames.length}`);
+                const loadedCount = frames.filter(img => 
+                    img.src && img.complete && img.naturalHeight > 0
+                ).length;
+                console.log(`🎉 加载完成！成功: ${loadedCount}/38 张图片`);
             }).catch((error) => {
-                console.warn('⚠️ 部分图片加载失败:', error);
-                allFramesLoaded = true; // 即使失败也继续
-                console.log('🔄 将继续使用已加载的图片播放动画...');
+                console.warn('⚠️ 加载过程中出现错误:', error);
+                allFramesLoaded = true;
             });
-            // ========== 修复结束 ==========
             
             createArrows();
             let isClicked = false;
@@ -229,9 +291,9 @@
                     if (allFramesLoaded) {
                         playAnimationSequence(frames);
                     } else {
-                        console.log('⏳ 动画帧还未加载完成，等待中...');
+                        console.log('⏳ 等待图片加载完成...');
                         const loadingMsg = document.createElement('div');
-                        loadingMsg.textContent = '加载动画中...';
+                        loadingMsg.textContent = '加载动画图片中...';
                         loadingMsg.style.color = 'white'; 
                         loadingMsg.style.position = 'fixed';
                         loadingMsg.style.top = '50%'; 
@@ -250,34 +312,13 @@
                                 loadingMsg.remove();
                                 playAnimationSequence(frames);
                             }
-                        }, 100);
+                        }, 500);
                     }
                     isClicked = true;
                 }
             });
             
             window.addEventListener('resize', createArrows);
-            
-            // ========== 【新增】页面加载完成后的测试 ==========
-            window.addEventListener('load', function() {
-                console.log('🌐 页面完全加载完成');
-                console.log('📌 测试直接访问图片:');
-                
-                // 测试关键图片
-                const testImages = [
-                    './image/IMG_4397.png',
-                    './image/mimo0001.png', 
-                    './image/IMG_4403.png'
-                ];
-                
-                testImages.forEach(url => {
-                    const img = new Image();
-                    img.crossOrigin = 'anonymous';
-                    img.onload = () => console.log(`   ✅ ${url}`);
-                    img.onerror = () => console.log(`   ❌ ${url}`);
-                    img.src = url;
-                });
-            });
         });
     </script>
 </body>
